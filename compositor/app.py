@@ -61,6 +61,45 @@ def fuente(nombre, tam, peso=800):
     return f
 
 
+def recortar_bordes_claros(img, umbral=238):
+    """Recorta franjas casi blancas/uniformes pegadas a los bordes (letterbox de la IA)."""
+    import numpy as np
+    a = np.asarray(img.convert("L"), dtype=int)
+    h, w = a.shape
+    top = 0
+    while top < h // 3 and a[top].mean() > umbral:
+        top += 1
+    bot = h
+    while bot > h * 2 // 3 and a[bot - 1].mean() > umbral:
+        bot -= 1
+    izq = 0
+    while izq < w // 3 and a[:, izq].mean() > umbral:
+        izq += 1
+    der = w
+    while der > w * 2 // 3 and a[:, der - 1].mean() > umbral:
+        der -= 1
+    if (top, izq, bot, der) != (0, 0, h, w):
+        img = img.crop((izq, top, der, bot))
+    return img
+
+
+def scrim_si_hace_falta(img, y0, y1, fuerza=150):
+    """Si la zona del texto es clara, oscurece con un degradado para garantizar contraste."""
+    import numpy as np
+    zona = np.asarray(img.crop((0, y0, img.width, min(y1, img.height))).convert("L"))
+    if zona.mean() < 135:
+        return img
+    alto = min(y1 + 60, img.height)
+    grad = Image.new("L", (1, alto), 0)
+    for i in range(alto):
+        t = 1 - (i / alto)
+        grad.putpixel((0, i), int(fuerza * (t ** 0.7)))
+    capa = Image.new("RGBA", (img.width, alto), (12, 20, 26, 255))
+    capa.putalpha(grad.resize((img.width, alto)))
+    img.paste(capa, (0, 0), capa)
+    return img
+
+
 def cubrir(img, w, h):
     """Escala la imagen para cubrir w×h y recorta centrado."""
     sc = max(w / img.width, h / img.height)
@@ -109,7 +148,13 @@ def componer(p: Pedido):
         raise HTTPException(400, f"imagen_b64 inválida: {e}")
 
     W, H = DIMENSIONES[p.formato]
+    base = recortar_bordes_claros(base)
     img = cubrir(base, W, H)
+    # garantizar contraste del titular (por si la IA dejó la zona clara)
+    if p.formato in ("feed", "feed_vertical") and (p.titular_1 or p.subtitulo):
+        img = scrim_si_hace_falta(img, 0, 380)
+    elif p.formato == "historia" and (p.titular_1 or p.subtitulo):
+        img = scrim_si_hace_falta(img, 240, 620)
     d = ImageDraw.Draw(img, "RGBA")
 
     ft, fx = marca["fuente_titulo"], marca["fuente_texto"]
