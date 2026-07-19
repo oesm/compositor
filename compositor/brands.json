@@ -1,0 +1,62 @@
+{
+  "conecta": {
+    "nombre": "Conecta Ecuador",
+    "color_titulo": [255, 255, 255],
+    "color_acento": [95, 191, 178],
+    "color_sub": [214, 226, 235],
+    "logo_claro": "logo-conecta.png",
+    "logo_oscuro": "logo-conecta.png",
+    "fuente_titulo": "Montserrat.ttf",
+    "fuente_texto": "Inter.ttf",
+    "dominio": "conectaecuador.com",
+    "cta_default": "Escríbenos al WhatsApp 093 936 0777"
+  },
+  "erpymes": {
+    "nombre": "ERPymes",
+    "color_titulo": [255, 255, 255],
+    "color_acento": [232, 114, 31],
+    "color_sub": [196, 210, 222],
+    "logo_claro": "logo-erpymes.png",
+    "logo_oscuro": "logo-erpymes-oscuro.png",
+    "fuente_titulo": "Montserrat.ttf",
+    "fuente_texto": "Inter.ttf",
+    "dominio": "erpymes.com",
+    "cta_default": "Agenda tu demo"
+  },
+  "smgroup": {
+    "nombre": "SM Group Ecuador",
+    "color_titulo": [255, 255, 255],
+    "color_acento": [80, 160, 220],
+    "color_sub": [200, 214, 226],
+    "logo_claro": "logo-smgroup.jpg",
+    "logo_oscuro": "logo-smgroup.jpg",
+    "fuente_titulo": "Montserrat.ttf",
+    "fuente_texto": "Inter.ttf",
+    "dominio": "smgroupecuador.com",
+    "cta_default": "Conversemos"
+  },
+  "index": {
+    "nombre": "Index",
+    "color_titulo": [255, 255, 255],
+    "color_acento": [212, 177, 96],
+    "color_sub": [200, 195, 188],
+    "logo_claro": "logo-index.jpg",
+    "logo_oscuro": "logo-index.jpg",
+    "fuente_titulo": "Montserrat.ttf",
+    "fuente_texto": "Inter.ttf",
+    "dominio": "",
+    "cta_default": ""
+  },
+  "taytamama": {
+    "nombre": "Tayta Mama Samay",
+    "color_titulo": [250, 248, 244],
+    "color_acento": [226, 158, 110],
+    "color_sub": [216, 206, 194],
+    "logo_claro": "logo-taytamama.png",
+    "logo_oscuro": "logo-taytamama-blanco.png",
+    "fuente_titulo": "Playfair.ttf",
+    "fuente_texto": "Lora.ttf",
+    "dominio": "@taytamamasamay",
+    "cta_default": "Reserva tu escapada por WhatsApp"
+  }
+}
