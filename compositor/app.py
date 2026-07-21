@@ -129,6 +129,50 @@ def ajustar_titulo(d, texto, nombre_fuente, tam_ini, max_w, peso=800):
     return fuente(nombre_fuente, tam, peso), tam
 
 
+def envolver_texto(d, texto, f, max_w):
+    """Parte el texto en líneas que quepan dentro de max_w (word-wrap real, no corta palabras)."""
+    palabras = texto.split()
+    if not palabras:
+        return []
+    lineas, actual = [], ""
+    for palabra in palabras:
+        prueba = (actual + " " + palabra).strip()
+        b = d.textbbox((0, 0), prueba, font=f)
+        if b[2] - b[0] <= max_w or not actual:
+            actual = prueba
+        else:
+            lineas.append(actual)
+            actual = palabra
+    if actual:
+        lineas.append(actual)
+    return lineas
+
+
+def ajustar_y_envolver(d, texto, nombre_fuente, tam_ini, max_w, max_lineas=3, peso=500, tam_min=22):
+    """
+    Para subtítulos: intenta con tam_ini; si el texto envuelto ocupa más de max_lineas,
+    reduce el tamaño de fuente (igual que ajustar_titulo) hasta que quepa en max_lineas,
+    sin bajar de tam_min. Devuelve (fuente, lista_de_lineas).
+    """
+    tam = tam_ini
+    while tam > tam_min:
+        f = fuente(nombre_fuente, tam, peso)
+        lineas = envolver_texto(d, texto, f, max_w)
+        if len(lineas) <= max_lineas:
+            return f, lineas
+        tam -= 2
+    f = fuente(nombre_fuente, tam_min, peso)
+    return f, envolver_texto(d, texto, f, max_w)
+
+
+def texto_multilinea_centrado(d, W, lineas, f, y, fill, interlineado=1.28, sombra=True):
+    """Dibuja cada línea centrada, apilada verticalmente. Devuelve la y final (después del bloque)."""
+    alto_linea = int(f.size * interlineado)
+    for i, linea in enumerate(lineas):
+        texto_centrado(d, W, linea, f, y + i * alto_linea, fill, sombra)
+    return y + len(lineas) * alto_linea
+
+
 @app.get("/salud")
 def salud():
     return {"ok": True}
@@ -181,7 +225,8 @@ def componer(p: Pedido):
             f2, tam = ajustar_titulo(d, p.titular_2, ft, 78, W - 2 * margen)
             texto_centrado(d, W, p.titular_2, f2, y, C_ACC); y += int(tam * 1.35)
         if p.subtitulo:
-            texto_centrado(d, W, p.subtitulo, fuente(fx, 38, 500), y + 8, C_SUB)
+            f_sub, lineas = ajustar_y_envolver(d, p.subtitulo, fx, 38, W - 2 * margen, max_lineas=3, peso=500)
+            texto_multilinea_centrado(d, W, lineas, f_sub, y + 8, C_SUB)
         if p.cta:
             fb = fuente(ft, 48, 800)
             b = d.textbbox((0, 0), p.cta, font=fb)
@@ -201,7 +246,8 @@ def componer(p: Pedido):
             f2, tam = ajustar_titulo(d, p.titular_2, ft, 82, W - 2 * margen)
             texto_centrado(d, W, p.titular_2, f2, y, C_ACC); y += int(tam * 1.38)
         if p.subtitulo:
-            texto_centrado(d, W, p.subtitulo, fuente(fx, 36, 500), y, C_SUB)
+            f_sub, lineas = ajustar_y_envolver(d, p.subtitulo, fx, 36, W - 2 * margen, max_lineas=3, peso=500)
+            texto_multilinea_centrado(d, W, lineas, f_sub, y, C_SUB)
         if p.mostrar_logo:
             ruta = os.path.join(BASE, "assets", "logos", marca["logo_oscuro"])
             logo = Image.open(ruta).convert("RGBA")
