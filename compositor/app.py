@@ -6,7 +6,7 @@ POST /componer  (JSON)
 {
   "imagen_b64": "<base64 de la imagen base, PNG o JPG>",
   "marca": "erpymes | conecta | smgroup | index | taytamama",
-  "formato": "feed | feed_vertical | historia | banner_linkedin | lista_beneficios | checklist_promo",
+  "formato": "feed | feed_vertical | historia | banner_linkedin | lista_beneficios | checklist_promo | circuito_modular",
   "titular_1": "Cortes automáticos",
   "titular_2": "de morosos",             // opcional, va en color acento
   "subtitulo": "Vence la factura...",    // opcional
@@ -38,6 +38,7 @@ DIMENSIONES = {
     "banner_linkedin": (1584, 396),
     "lista_beneficios": (1080, 1350),
     "checklist_promo": (1080, 1350),
+    "circuito_modular": (1080, 1350),
 }
 
 app = FastAPI(title="Compositor de visuales")
@@ -199,6 +200,156 @@ def texto_multilinea_izquierda(d, x, lineas, f, y, fill, interlineado=1.28):
     return y + len(lineas) * alto_linea
 
 
+def hex_vertices(cx, cy, r):
+    """Vértices de un hexágono 'pointy-top' (un vértice arriba, uno abajo)."""
+    pts = []
+    for i in range(6):
+        ang = math.radians(-90 + 60 * i)
+        pts.append((cx + r * math.cos(ang), cy + r * math.sin(ang)))
+    return pts
+
+
+def texto_centrado_en_punto(d, cx, cy, lineas, f, fill, interlineado=1.15):
+    """Centra un bloque de texto (horizontal y verticalmente) alrededor de (cx, cy)."""
+    alto_linea = int(f.size * interlineado)
+    alto_total = alto_linea * len(lineas)
+    y0 = cy - alto_total / 2
+    for i, linea in enumerate(lineas):
+        b = d.textbbox((0, 0), linea, font=f)
+        w = b[2] - b[0]
+        x = cx - w / 2 - b[0]
+        d.text((x, y0 + i * alto_linea), linea, font=f, fill=tuple(fill))
+
+
+def recortar_a_hex(img, r):
+    """Recorta una imagen (ya rellenando un cuadrado) a la forma de un hexágono pointy-top de radio r."""
+    size = int(r * 2)
+    img_cuad = cubrir(img, size, size)
+    mask = Image.new("L", (size, size), 0)
+    md = ImageDraw.Draw(mask)
+    pts = hex_vertices(size / 2, size / 2, r)
+    md.polygon(pts, fill=255)
+    out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    out.paste(img_cuad, (0, 0))
+    out.putalpha(mask)
+    return out
+
+
+def texto_trackeado(d, x, y, texto, f, fill, espaciado=3):
+    """Dibuja texto con espaciado extra entre letras (look 'utility caps'). Devuelve la x final."""
+    cx = x
+    for ch in texto:
+        d.text((cx, y), ch, font=f, fill=tuple(fill))
+        b = d.textbbox((0, 0), ch, font=f)
+        cx += (b[2] - b[0]) + espaciado
+    return cx
+
+
+def ancho_trackeado(d, texto, f, espaciado=3):
+    """Ancho total que ocupará texto_trackeado, para poder alinearlo a la derecha."""
+    ancho = 0
+    for ch in texto:
+        b = d.textbbox((0, 0), ch, font=f)
+        ancho += (b[2] - b[0]) + espaciado
+    return ancho
+
+
+def render_circuito_modular(p, marca, W, H):
+    """
+    Template 'circuito modular': una traza de acento conecta verticalmente una serie
+    de 'chips' (uno por módulo/beneficio), cada uno con un nodo circular a la izquierda,
+    icono y texto. Título en dos tonos arriba, franja de foto de IA y barra de contacto abajo.
+    Fondo oscuro real de la marca (no un tono genérico).
+    """
+    C_ACC = tuple(marca["color_acento"])
+    C_OSC = OSCURO_POR_MARCA.get(p.marca.lower().strip(), (18, 30, 40))
+    FONDO = C_OSC
+    CHIP_FILL = tuple(min(255, c + 18) for c in FONDO)
+    BLANCO = (244, 247, 249)
+    GRIS = (150, 168, 181)
+    ft, fx = marca["fuente_titulo"], marca["fuente_texto"]
+    margen = 56
+
+    img = Image.new("RGB", (W, H), FONDO)
+    d = ImageDraw.Draw(img, "RGBA")
+
+    y = margen
+    if p.mostrar_logo:
+        ruta = os.path.join(BASE, "assets", "logos", marca["logo_claro"])
+        logo = Image.open(ruta).convert("RGBA")
+        lw = 220
+        logo = logo.resize((lw, round(logo.height * lw / logo.width)), Image.LANCZOS)
+        img.paste(logo, (margen, y), logo)
+        d = ImageDraw.Draw(img, "RGBA")
+        y += logo.height + 30
+
+    if p.titular_1:
+        f1, lineas1 = ajustar_y_envolver(d, p.titular_1, ft, 56, W - 2 * margen, max_lineas=2, peso=800)
+        y = texto_multilinea_izquierda(d, margen, lineas1, f1, y, BLANCO, interlineado=1.12) + 4
+    if p.titular_2:
+        f2, lineas2 = ajustar_y_envolver(d, p.titular_2, ft, 56, W - 2 * margen, max_lineas=2, peso=800)
+        y = texto_multilinea_izquierda(d, margen, lineas2, f2, y, C_ACC, interlineado=1.12) + 14
+    if p.subtitulo:
+        f_sub, lineas_sub = ajustar_y_envolver(d, p.subtitulo, fx, 28, W - 2 * margen, max_lineas=2, peso=500, tam_min=20)
+        y = texto_multilinea_izquierda(d, margen, lineas_sub, f_sub, y, GRIS, interlineado=1.25) + 10
+    y += 26
+
+    items = p.items[:6]
+    nodo_x = margen + 10
+    chip_x0 = margen + 40
+    chip_x1 = W - margen
+    ic_s = 40
+    filas_y = []  # guarda (y_centro_nodo) para dibujar la traza al final
+
+    for it in items:
+        f_it, lineas_it = ajustar_y_envolver(d, it.texto, fx, 30, chip_x1 - chip_x0 - ic_s - 40, max_lineas=2, peso=600, tam_min=20)
+        alto_linea = int(f_it.size * 1.2)
+        alto_texto = alto_linea * len(lineas_it)
+        alto_chip = max(alto_texto + 36, ic_s + 30)
+        d.rounded_rectangle([chip_x0, y, chip_x1, y + alto_chip], radius=16, fill=CHIP_FILL)
+        cy_centro = y + alto_chip / 2
+        dibujar_icono(d, it.icono, chip_x0 + 20, cy_centro - ic_s / 2, ic_s, BLANCO, C_ACC)
+        texto_multilinea_izquierda(d, chip_x0 + 20 + ic_s + 18, lineas_it, f_it,
+                                    cy_centro - alto_texto / 2, BLANCO, interlineado=1.2)
+        filas_y.append(cy_centro)
+        y += alto_chip + 26
+
+    # traza vertical + nodos, dibujada sobre los chips para que se vea "entrando" a cada uno
+    if filas_y:
+        d.line([(nodo_x, filas_y[0]), (nodo_x, filas_y[-1])], fill=(*C_ACC, 160), width=4)
+        for cy_centro in filas_y:
+            d.line([(nodo_x, cy_centro), (chip_x0, cy_centro)], fill=(*C_ACC, 160), width=4)
+            r = 9
+            d.ellipse([nodo_x - r, cy_centro - r, nodo_x + r, cy_centro + r], fill=C_ACC)
+
+    y += 14
+
+    if p.imagen_b64:
+        try:
+            foto = Image.open(io.BytesIO(base64.b64decode(p.imagen_b64))).convert("RGB")
+            foto = recortar_bordes_claros(foto)
+            franja_h = min(260, H - y - 130)
+            if franja_h > 80:
+                foto = cubrir(foto, W - 2 * margen, franja_h)
+                mask = Image.new("L", foto.size, 0)
+                ImageDraw.Draw(mask).rounded_rectangle([0, 0, foto.width, foto.height], radius=18, fill=255)
+                img.paste(foto, (margen, int(y)), mask)
+                y += franja_h + 30
+        except Exception:
+            pass
+
+    barra_y = H - margen - 30
+    f_util = fuente(fx, 24, 600)
+    if p.mostrar_dominio and marca["dominio"]:
+        texto_trackeado(d, margen, barra_y, marca["dominio"].upper(), f_util, GRIS, espaciado=2)
+    if p.cta:
+        txt = p.cta.upper()
+        ancho = ancho_trackeado(d, txt, f_util, espaciado=2)
+        texto_trackeado(d, W - margen - ancho, barra_y, txt, f_util, C_ACC, espaciado=2)
+
+    return img
+
+
 def _linea(d, puntos, color, grosor):
     d.line(puntos, fill=color, width=grosor, joint="curve")
     r = grosor // 2
@@ -323,6 +474,13 @@ def componer(p: Pedido):
     C_TIT, C_ACC, C_SUB = marca["color_titulo"], marca["color_acento"], marca["color_sub"]
     margen = 56 if p.formato != "banner_linkedin" else 90
 
+    # --- Formato "circuito modular" (fondo oscuro real de la marca, traza + chips) ---
+    if p.formato == "circuito_modular":
+        img = render_circuito_modular(p, marca, W, H)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return Response(content=buf.getvalue(), media_type="image/png")
+
     # --- Formatos "template" (sin foto de IA como fondo, layout tipo plantilla) ---
     if p.formato in ("lista_beneficios", "checklist_promo"):
         C_OSC = OSCURO_POR_MARCA.get(p.marca.lower().strip(), (26, 30, 36))
@@ -334,7 +492,7 @@ def componer(p: Pedido):
         if p.mostrar_logo:
             ruta = os.path.join(BASE, "assets", "logos", marca["logo_oscuro"])
             logo = Image.open(ruta).convert("RGBA")
-            lw = 260
+            lw = 340 if p.formato == "lista_beneficios" else 260
             logo = logo.resize((lw, round(logo.height * lw / logo.width)), Image.LANCZOS)
             img.paste(logo, (margen, y), logo)
             d = ImageDraw.Draw(img, "RGBA")
