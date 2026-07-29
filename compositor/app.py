@@ -288,6 +288,17 @@ ICONOS = {
     "check": icono_check,
 }
 
+# color_titulo en brands.json está pensado para texto sobre foto oscura (suele ser blanco).
+# Para las plantillas de fondo BLANCO (lista_beneficios, checklist_promo) hace falta un
+# color oscuro real por marca; blanco sobre blanco sería invisible.
+OSCURO_POR_MARCA = {
+    "conecta": (46, 95, 146),      # azul #2E5F92
+    "erpymes": (31, 78, 110),      # azul #1F4E6E
+    "smgroup": (10, 95, 168),      # azul #0A5FA8
+    "index": (33, 33, 33),         # carbón #212121
+    "taytamama": (53, 32, 15),     # café #35200F
+}
+
 
 def dibujar_icono(d, nombre, x, y, s, c1, c2):
     fn = ICONOS.get(nombre, icono_check)
@@ -314,6 +325,7 @@ def componer(p: Pedido):
 
     # --- Formatos "template" (sin foto de IA como fondo, layout tipo plantilla) ---
     if p.formato in ("lista_beneficios", "checklist_promo"):
+        C_OSC = OSCURO_POR_MARCA.get(p.marca.lower().strip(), (26, 30, 36))
         img = Image.new("RGB", (W, H), (255, 255, 255))
         d = ImageDraw.Draw(img, "RGBA")
 
@@ -332,17 +344,17 @@ def componer(p: Pedido):
             panel_w = int(W * 0.52)
             if p.titular_1:
                 f1, lineas1 = ajustar_y_envolver(d, p.titular_1, ft, 62, panel_w - margen, max_lineas=3, peso=800)
-                y = texto_multilinea_izquierda(d, margen, lineas1, f1, y, C_TIT, interlineado=1.15) + 24
+                y = texto_multilinea_izquierda(d, margen, lineas1, f1, y, C_OSC, interlineado=1.15) + 24
             filas = min(len(p.items), 8)
             alto_disp = H - y - margen
             alto_fila = min(96, alto_disp // max(filas, 1))
             ic_s = int(alto_fila * 0.62)
             for it in p.items[:filas]:
-                dibujar_icono(d, it.icono, margen, y + (alto_fila - ic_s) // 2, ic_s, tuple(C_TIT), tuple(C_ACC))
+                dibujar_icono(d, it.icono, margen, y + (alto_fila - ic_s) // 2, ic_s, tuple(C_OSC), tuple(C_ACC))
                 f_it = fuente(fx, 34, 500)
                 _, lineas_it = ajustar_y_envolver(d, it.texto, fx, 34, panel_w - margen - ic_s - 28, max_lineas=1, peso=500)
                 texto_izquierda(d, margen + ic_s + 28, lineas_it[0] if lineas_it else it.texto, f_it,
-                                 y + alto_fila // 2 - 20, C_TIT)
+                                 y + alto_fila // 2 - 20, C_OSC)
                 y += alto_fila
             # foto de IA a la derecha, si vino
             if p.imagen_b64:
@@ -356,14 +368,14 @@ def componer(p: Pedido):
             if p.mostrar_dominio and marca["dominio"]:
                 barra_h = 90
                 d = ImageDraw.Draw(img, "RGBA")
-                d.rectangle([0, H - barra_h, W, H], fill=tuple(C_TIT))
+                d.rectangle([0, H - barra_h, W, H], fill=tuple(C_OSC))
                 fd = fuente(fx, 32, 600)
                 texto_centrado(d, W, marca["dominio"], fd, H - barra_h // 2 - 18, (255, 255, 255), sombra=False)
 
         else:  # checklist_promo
             if p.titular_1:
                 f1, lineas1 = ajustar_y_envolver(d, p.titular_1, ft, 66, W - 2 * margen, max_lineas=2, peso=800)
-                y = texto_multilinea_centrado(d, W, lineas1, f1, y, C_TIT, interlineado=1.12, sombra=False) + 6
+                y = texto_multilinea_centrado(d, W, lineas1, f1, y, C_OSC, interlineado=1.12, sombra=False) + 6
             if p.titular_2:
                 f2, lineas2 = ajustar_y_envolver(d, p.titular_2, ft, 44, W - 2 * margen, max_lineas=2, peso=700)
                 y = texto_multilinea_centrado(d, W, lineas2, f2, y, C_ACC, interlineado=1.15, sombra=False) + 32
@@ -374,7 +386,7 @@ def componer(p: Pedido):
                 ic_s = 52
                 dibujar_icono(d, "check", margen, y, ic_s, tuple(C_ACC), tuple(C_ACC))
                 f_it = fuente(fx, 36, 700)
-                texto_izquierda(d, margen + ic_s + 24, it.texto, f_it, y + 6, C_TIT)
+                texto_izquierda(d, margen + ic_s + 24, it.texto, f_it, y + 6, C_OSC)
                 y += ic_s + 30
             y += 20
             if p.cta:
@@ -386,7 +398,7 @@ def componer(p: Pedido):
                 d.rounded_rectangle([x0, by0, x0 + bw, by0 + 96], radius=48, fill=tuple(C_ACC))
                 texto_centrado(d, W, p.cta, fb, by0 + 24, (255, 255, 255), sombra=False)
             if p.mostrar_dominio and marca["dominio"]:
-                texto_centrado(d, W, marca["dominio"], fuente(fx, 32, 600), H - margen - 20, C_SUB, sombra=False)
+                texto_centrado(d, W, marca["dominio"], fuente(fx, 32, 600), H - margen - 20, C_OSC, sombra=False)
 
         buf = io.BytesIO()
         img.save(buf, format="PNG")
