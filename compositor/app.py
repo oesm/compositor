@@ -463,7 +463,7 @@ def componer(p: Pedido):
             f_sub, lineas = ajustar_y_envolver(d, p.subtitulo, fx, 36, W - 2 * margen, max_lineas=3, peso=500)
             texto_multilinea_centrado(d, W, lineas, f_sub, y, C_SUB)
         if p.mostrar_logo:
-            ruta = os.path.join(BASE, "assets", "logos", marca["logo_oscuro"])
+            ruta = os.path.join(BASE, "assets", "logos", marca["logo_claro"])
             logo = Image.open(ruta).convert("RGBA")
             lw = 230
             logo = logo.resize((lw, round(logo.height * lw / logo.width)), Image.LANCZOS)
