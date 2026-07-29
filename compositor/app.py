@@ -343,19 +343,29 @@ def componer(p: Pedido):
         if p.formato == "lista_beneficios":
             panel_w = int(W * 0.52)
             if p.titular_1:
-                f1, lineas1 = ajustar_y_envolver(d, p.titular_1, ft, 62, panel_w - margen, max_lineas=3, peso=800)
-                y = texto_multilinea_izquierda(d, margen, lineas1, f1, y, C_OSC, interlineado=1.15) + 24
+                f1, lineas1 = ajustar_y_envolver(d, p.titular_1, ft, 62, panel_w - margen, max_lineas=2, peso=800)
+                y = texto_multilinea_izquierda(d, margen, lineas1, f1, y, C_OSC, interlineado=1.12) + 6
+            if p.titular_2:
+                f2, lineas2 = ajustar_y_envolver(d, p.titular_2, ft, 62, panel_w - margen, max_lineas=2, peso=800)
+                y = texto_multilinea_izquierda(d, margen, lineas2, f2, y, C_ACC, interlineado=1.12) + 18
+            if p.subtitulo:
+                f_sub, lineas_sub = ajustar_y_envolver(d, p.subtitulo, fx, 30, panel_w - margen, max_lineas=2, peso=500, tam_min=20)
+                COLOR_SUB_CLARO = (95, 108, 120)  # gris neutro, legible sobre blanco en cualquier marca
+                y = texto_multilinea_izquierda(d, margen, lineas_sub, f_sub, y, COLOR_SUB_CLARO, interlineado=1.25) + 10
+            y += 22
             filas = min(len(p.items), 8)
-            alto_disp = H - y - margen
-            alto_fila = min(96, alto_disp // max(filas, 1))
-            ic_s = int(alto_fila * 0.62)
+            ic_s = 46
+            texto_x = margen + ic_s + 24
+            texto_w = panel_w - texto_x - 20
             for it in p.items[:filas]:
-                dibujar_icono(d, it.icono, margen, y + (alto_fila - ic_s) // 2, ic_s, tuple(C_OSC), tuple(C_ACC))
-                f_it = fuente(fx, 34, 500)
-                _, lineas_it = ajustar_y_envolver(d, it.texto, fx, 34, panel_w - margen - ic_s - 28, max_lineas=1, peso=500)
-                texto_izquierda(d, margen + ic_s + 28, lineas_it[0] if lineas_it else it.texto, f_it,
-                                 y + alto_fila // 2 - 20, C_OSC)
-                y += alto_fila
+                f_it, lineas_it = ajustar_y_envolver(d, it.texto, fx, 30, texto_w, max_lineas=2, peso=500, tam_min=20)
+                alto_linea = int(f_it.size * 1.22)
+                alto_bloque = max(alto_linea * len(lineas_it), ic_s + 12)
+                dibujar_icono(d, it.icono, margen, y + (alto_bloque - ic_s) // 2, ic_s, tuple(C_OSC), tuple(C_ACC))
+                texto_multilinea_izquierda(d, texto_x, lineas_it, f_it,
+                                            y + (alto_bloque - alto_linea * len(lineas_it)) // 2,
+                                            C_OSC, interlineado=1.22)
+                y += alto_bloque + 24
             # foto de IA a la derecha, si vino
             if p.imagen_b64:
                 try:
@@ -382,12 +392,18 @@ def componer(p: Pedido):
             else:
                 y += 24
             filas = min(len(p.items), 6)
+            ic_s = 52
+            texto_x = margen + ic_s + 24
+            texto_w = W - texto_x - margen
             for it in p.items[:filas]:
-                ic_s = 52
-                dibujar_icono(d, "check", margen, y, ic_s, tuple(C_ACC), tuple(C_ACC))
-                f_it = fuente(fx, 36, 700)
-                texto_izquierda(d, margen + ic_s + 24, it.texto, f_it, y + 6, C_OSC)
-                y += ic_s + 30
+                f_it, lineas_it = ajustar_y_envolver(d, it.texto, fx, 36, texto_w, max_lineas=2, peso=700, tam_min=24)
+                alto_linea = int(f_it.size * 1.2)
+                alto_bloque = max(alto_linea * len(lineas_it), ic_s)
+                dibujar_icono(d, "check", margen, y + (alto_bloque - ic_s) // 2, ic_s, tuple(C_ACC), tuple(C_ACC))
+                texto_multilinea_izquierda(d, texto_x, lineas_it, f_it,
+                                            y + (alto_bloque - alto_linea * len(lineas_it)) // 2,
+                                            C_OSC, interlineado=1.2)
+                y += alto_bloque + 26
             y += 20
             if p.cta:
                 fb = fuente(ft, 46, 800)
