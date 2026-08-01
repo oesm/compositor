@@ -492,39 +492,55 @@ def componer(p: Pedido):
         if p.mostrar_logo:
             ruta = os.path.join(BASE, "assets", "logos", marca["logo_oscuro"])
             logo = Image.open(ruta).convert("RGBA")
-            lw = 340 if p.formato == "lista_beneficios" else 260
+            lw = 220 if p.formato == "lista_beneficios" else 260
             logo = logo.resize((lw, round(logo.height * lw / logo.width)), Image.LANCZOS)
             img.paste(logo, (margen, y), logo)
             d = ImageDraw.Draw(img, "RGBA")
-            y += logo.height + 36
+            y += logo.height + 16
 
         if p.formato == "lista_beneficios":
             panel_w = int(W * 0.52)
+            
+            # --- 1. Logo más compacto ---
+            if p.mostrar_logo:
+                ruta = os.path.join(BASE, "assets", "logos", marca["logo_oscuro"])
+                logo = Image.open(ruta).convert("RGBA")
+                lw = 220  # Reducido de 340 a 220 para ganar ~120px verticales
+                logo = logo.resize((lw, round(logo.height * lw / logo.width)), Image.LANCZOS)
+                img.paste(logo, (margen, y), logo)
+                d = ImageDraw.Draw(img, "RGBA")
+                y += logo.height + 16  # Reducido margen inferior del logo de 36 a 16
+
+            # --- 2. Titulares compactos ---
             if p.titular_1:
-                f1, lineas1 = ajustar_y_envolver(d, p.titular_1, ft, 62, panel_w - margen, max_lineas=2, peso=800)
-                y = texto_multilinea_izquierda(d, margen, lineas1, f1, y, C_OSC, interlineado=1.12) + 6
+                f1, lineas1 = ajustar_y_envolver(d, p.titular_1, ft, 48, panel_w - margen, max_lineas=2, peso=800)
+                y = texto_multilinea_izquierda(d, margen, lineas1, f1, y, C_OSC, interlineado=1.1) + 4
             if p.titular_2:
-                f2, lineas2 = ajustar_y_envolver(d, p.titular_2, ft, 62, panel_w - margen, max_lineas=2, peso=800)
-                y = texto_multilinea_izquierda(d, margen, lineas2, f2, y, C_ACC, interlineado=1.12) + 18
+                f2, lineas2 = ajustar_y_envolver(d, p.titular_2, ft, 48, panel_w - margen, max_lineas=2, peso=800)
+                y = texto_multilinea_izquierda(d, margen, lineas2, f2, y, C_ACC, interlineado=1.1) + 10
             if p.subtitulo:
-                f_sub, lineas_sub = ajustar_y_envolver(d, p.subtitulo, fx, 30, panel_w - margen, max_lineas=2, peso=500, tam_min=20)
-                COLOR_SUB_CLARO = (95, 108, 120)  # gris neutro, legible sobre blanco en cualquier marca
-                y = texto_multilinea_izquierda(d, margen, lineas_sub, f_sub, y, COLOR_SUB_CLARO, interlineado=1.25) + 10
-            y += 22
-            filas = min(len(p.items), 8)
-            ic_s = 46
-            texto_x = margen + ic_s + 24
-            texto_w = panel_w - texto_x - 20
+                f_sub, lineas_sub = ajustar_y_envolver(d, p.subtitulo, fx, 24, panel_w - margen, max_lineas=2, peso=500, tam_min=18)
+                COLOR_SUB_CLARO = (95, 108, 120)
+                y = texto_multilinea_izquierda(d, margen, lineas_sub, f_sub, y, COLOR_SUB_CLARO, interlineado=1.2) + 6
+            
+            y += 14  # Espacio controlado antes de la lista
+
+            # --- 3. Lista de ítems optimizada (Máximo 5 ítems legibles) ---
+            filas = min(len(p.items), 5)  # Garantiza máximo 5 ítems para no chocar con el footer
+            ic_s = 36  # Iconos ajustados de 46 a 36px
+            texto_x = margen + ic_s + 16
+            texto_w = panel_w - texto_x - 16
+
             for it in p.items[:filas]:
-                f_it, lineas_it = ajustar_y_envolver(d, it.texto, fx, 30, texto_w, max_lineas=2, peso=500, tam_min=20)
-                alto_linea = int(f_it.size * 1.22)
-                alto_bloque = max(alto_linea * len(lineas_it), ic_s + 12)
+                f_it, lineas_it = ajustar_y_envolver(d, it.texto, fx, 24, texto_w, max_lineas=2, peso=500, tam_min=18)
+                alto_linea = int(f_it.size * 1.18)
+                alto_bloque = max(alto_linea * len(lineas_it), ic_s + 4)
                 dibujar_icono(d, it.icono, margen, y + (alto_bloque - ic_s) // 2, ic_s, tuple(C_OSC), tuple(C_ACC))
                 texto_multilinea_izquierda(d, texto_x, lineas_it, f_it,
                                             y + (alto_bloque - alto_linea * len(lineas_it)) // 2,
-                                            C_OSC, interlineado=1.22)
-                y += alto_bloque + 24
-            # foto de IA a la derecha, si vino
+                                            C_OSC, interlineado=1.18)
+                y += alto_bloque + 14  # Reducido espacio entre ítems de 24px a 14px
+              
             if p.imagen_b64:
                 try:
                     foto = Image.open(io.BytesIO(base64.b64decode(p.imagen_b64))).convert("RGB")
