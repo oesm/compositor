@@ -492,7 +492,7 @@ def componer(p: Pedido):
         if p.mostrar_logo:
             ruta = os.path.join(BASE, "assets", "logos", marca["logo_oscuro"])
             logo = Image.open(ruta).convert("RGBA")
-            lw = 220 if p.formato == "lista_beneficios" else 260
+            lw = 320 if p.formato == "lista_beneficios" else 260
             logo = logo.resize((lw, round(logo.height * lw / logo.width)), Image.LANCZOS)
             img.paste(logo, (margen, y), logo)
             d = ImageDraw.Draw(img, "RGBA")
@@ -500,17 +500,7 @@ def componer(p: Pedido):
 
         if p.formato == "lista_beneficios":
             panel_w = int(W * 0.52)
-            
-            # --- 1. Logo más compacto ---
-            if p.mostrar_logo:
-                ruta = os.path.join(BASE, "assets", "logos", marca["logo_oscuro"])
-                logo = Image.open(ruta).convert("RGBA")
-                lw = 220  # Reducido de 340 a 220 para ganar ~120px verticales
-                logo = logo.resize((lw, round(logo.height * lw / logo.width)), Image.LANCZOS)
-                img.paste(logo, (margen, y), logo)
-                d = ImageDraw.Draw(img, "RGBA")
-                y += logo.height + 16  # Reducido margen inferior del logo de 36 a 16
-
+          
             # --- 2. Titulares compactos ---
             if p.titular_1:
                 f1, lineas1 = ajustar_y_envolver(d, p.titular_1, ft, 48, panel_w - margen, max_lineas=2, peso=800)
